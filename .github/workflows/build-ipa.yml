@@ -1,0 +1,53 @@
+name: Build unsigned IPA
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'wechat-task-inbox-upload/**'
+      - '.github/workflows/build-ipa.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-ipa:
+    name: Build unsigned IPA
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: wechat-task-inbox-upload
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build archive
+        run: |
+          xcodebuild \
+            -project WeChatTaskInbox.xcodeproj \
+            -scheme WeChatTaskInbox \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$PWD/build/WeChatTaskInbox.xcarchive" \
+            clean archive \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p build/Payload
+          cp -R build/WeChatTaskInbox.xcarchive/Products/Applications/WeChatTaskInbox.app build/Payload/
+          (
+            cd build
+            zip -qry WeChatTaskInbox-unsigned.ipa Payload
+          )
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: WeChatTaskInbox-unsigned-ipa
+          path: wechat-task-inbox-upload/build/WeChatTaskInbox-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 7
