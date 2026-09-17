@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var model = CaptureViewModel()
 
     var body: some View {
@@ -22,9 +23,9 @@ struct ContentView: View {
                 statusCard
 
                 Button {
-                    Task { await model.processClipboard(allowDuplicate: true) }
+                    Task { await model.processClipboard() }
                 } label: {
-                    Label("重新读取剪贴板", systemImage: "doc.on.clipboard")
+                    Label("读取剪贴板", systemImage: "doc.on.clipboard")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
@@ -42,6 +43,10 @@ struct ContentView: View {
         }
         .task {
             await model.processClipboard()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active else { return }
+            Task { await model.processClipboard() }
         }
     }
 
